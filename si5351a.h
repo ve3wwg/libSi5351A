@@ -4,9 +4,14 @@
 ///////////////////////////////////////////////////////////////////////
 
 #include <stdint.h>
+#include <stdbool.h>
 
-typedef void (i2c_writecb_t)(uint8_t i2c_addr,uint8_t *buf,uint8_t bytes);
-typedef void (i2c_readcb_t)(uint8_t i2c_addr,uint8_t *buf,uint8_t bytes);
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef int (i2c_writecb_t)(uint8_t i2c_addr,uint8_t *buf,uint8_t bytes);
+typedef int (i2c_readcb_t)(uint8_t i2c_addr,uint8_t *buf,uint8_t bytes);
 
 struct s_Si5351A {			// Si5351A Register Definitions
 	struct s_r0 {			// Device status
@@ -188,5 +193,10 @@ struct s_Si5351A {			// Si5351A Register Definitions
 typedef struct s_Si5351A Si5351A;
 
 void Si5351A_init(Si5351A *si,uint8_t i2c_addr,i2c_readcb_t readcb,i2c_writecb_t writecb,void *arg);
+void Si5351A_device_reset(Si5351A *si);
+
+#ifdef __cplusplus
+}
+#endif
 
 // End si5351a.h
