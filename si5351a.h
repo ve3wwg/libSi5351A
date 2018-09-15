@@ -13,6 +13,64 @@ extern "C" {
 typedef int (i2c_writecb_t)(uint8_t i2c_addr,uint8_t *buf,uint8_t bytes);
 typedef int (i2c_readcb_t)(uint8_t i2c_addr,uint8_t *buf,uint8_t bytes);
 
+typedef enum {
+	Clock0=0,
+	Clock1,
+	Clock2
+} Clock;
+
+typedef enum {
+	PLLA=0,
+	PLLB
+} PLL;
+
+typedef enum {
+	FractionalMode=0,
+	IntegerMode
+} MultiSynthMode;
+
+typedef enum {
+	XTAL_Source = 0b00,		// XTAL is clock source
+	MSynth_Source = 0b11		// MSynth is clock source
+} ClockSource;
+
+typedef enum {
+	Drive2mA = 0b00,
+	Drive4mA = 0b01,
+	Drive6mA = 0b10,
+	Drive8mA = 0b11
+} ClockDrive;
+
+typedef enum {
+	DisLow = 0b00,
+	DisHigh = 0b01,
+	DisHiZ = 0b10,
+	DisNever = 0b11
+} DisState;
+
+typedef enum {
+	MSynth0 = 0,
+	MSynth1,
+	MSynth2
+} MultiSynth;
+
+typedef enum {
+	MSynthP1,
+	MSynthP2,
+	MSynthP3,
+} MSynthParam;
+
+typedef enum {
+	RxDiv1 = 0b000,
+	RxDiv2 = 0b001,
+	RxDiv4 = 0b010,
+	RxDiv8 = 0b011,
+	RxDiv16 = 0b100,
+	RxDiv32 = 0b101,
+	RxDiv64 = 0b110,
+	RxDiv128 = 0b111
+} RxDiv;
+
 struct s_Si5351A {			// Si5351A Register Definitions
 	struct s_r0 {			// Device status
 		uint8_t	revid : 2;	// R: Device revision ID
@@ -52,12 +110,12 @@ struct s_Si5351A {			// Si5351A Register Definitions
 		uint8_t	unused : 4;	// X: Leave as default
 	}	r15;
 	struct s_r16 {			// Clk0 control
-		uint8_t clk0_idrv : 2;	// RW: 00=2, 01=4, 10=6, 11=8 mA
-		uint8_t	clk0_src : 2;	// RW: 00=XTAL, 11=MultiSynth 0
-		uint8_t	clk0_inv : 1;	// RW: 1=Invert
-		uint8_t	ms0_src : 1;	// RW: 0=PLLA, 1=PLLB
-		uint8_t	ms0_int : 1;	// RW: 0=Fractional mode, 1=Integer mode
-		uint8_t	clk0_pdn : 1;	// RW: 0=Powered up, 1=CLK0 driver powered down
+		uint8_t clkx_idrv : 2;	// RW: 00=2, 01=4, 10=6, 11=8 mA
+		uint8_t	clkx_src : 2;	// RW: 00=XTAL, 11=MultiSynth 0
+		uint8_t	msx_inv : 1;	// RW: 1=Invert
+		uint8_t	msx_src : 1;	// RW: 0=PLLA, 1=PLLB
+		uint8_t	msx_int : 1;	// RW: 0=Fractional mode, 1=Integer mode
+		uint8_t	clkx_pdn : 1;	// RW: 0=Powered up, 1=CLK0 driver powered down
 	}	r16;
 	struct s_r16 r17;		// Clk1 control
 	struct s_r16 r18;		// Clk2 control
@@ -68,55 +126,39 @@ struct s_Si5351A {			// Si5351A Register Definitions
 		uint8_t	unused : 2;
 	}	r24;
 
-	// MultiSynth 0:
-	struct s_r42 {			// MultiSynth0 Parameters
-		uint8_t	msx_p3_15_8;	// part of denominator
-	}	r42;
-	struct s_r43 {			// MultiSynth0 Parameters
-		uint8_t	msx_p3_7_0;	// part of denominator
-	}	r43;
-	struct s_r44 {			// MultiSynth0 Parameters
-		uint8_t	msx_p1_17_16:2;	// integer part of divider
-		uint8_t	reserved : 2;
-		uint8_t	r0_div : 2;	// 000=1,001=2,010=4,011=8,100=16,101=32,110=64,111=128
- 		uint8_t	unused : 1;	
-	}	r44;
-	struct s_r45 {			// MultiSynth0 Parameters
-		uint8_t	msx_p1_15_8:8;	// integer part of divider
-	}	r45;
-	struct s_r46 {			// MultiSynth0 Parameters
-		uint8_t	msx_p1_7_0;	// integer part of divider
-	}	r46;
-	struct s_r47 {			// MultiSynth0 Parameters
-		uint8_t	msx_p2_19_16:4;	// Part of numerator
-		uint8_t	msx_p3_19_16:4;	// Part of denominator
-	}	r47;
-	struct s_r48 {			// MultiSynth0 Parameters
-		uint8_t	msx_p2_15_8;	// Part of fractional numerator
-	}	r48;
-	struct s_r49 {			// MultiSynth0 Parameters
-		uint8_t	msx_p2_7_0;	// Part of fractional numerator
-	}	r49;
-
-	// MultiSynth 1:
-	struct s_r42 r50;
-	struct s_r43 r51;
-	struct s_r44 r52;
-	struct s_r45 r53;
-	struct s_r46 r54;
-	struct s_r47 r55;
-	struct s_r48 r56;
-	struct s_r49 r57;
-
-	// MultiSynth 2:
-	struct s_r42 r58;
-	struct s_r43 r59;
-	struct s_r44 r60;
-	struct s_r45 r61;
-	struct s_r46 r62;
-	struct s_r47 r63;
-	struct s_r48 r64;
-	struct s_r49 r65;
+	// MultiSynth Parameters:
+	struct s_msynth_params {
+		struct s_r42 {			// MultiSynth0 Parameters
+			uint8_t	msx_p3_15_8;	// part of denominator
+		}	r42;
+		struct s_r43 {			// MultiSynth0 Parameters
+			uint8_t	msx_p3_7_0;	// part of denominator
+		}	r43;
+		struct s_r44 {			// MultiSynth0 Parameters
+			uint8_t	msx_p1_17_16:2;	// integer part of divider
+			uint8_t	reserved : 2;
+			uint8_t	rx_div : 2;	// 000=1,001=2,010=4,011=8,100=16,101=32,110=64,111=128
+	 		uint8_t	unused : 1;	
+		}	r44;
+		struct s_r45 {			// MultiSynth0 Parameters
+			uint8_t	msx_p1_15_8:8;	// integer part of divider
+		}	r45;
+		struct s_r46 {			// MultiSynth0 Parameters
+			uint8_t	msx_p1_7_0;	// integer part of divider
+		}	r46;
+		struct s_r47 {			// MultiSynth0 Parameters
+			uint8_t	msx_p2_19_16:4;	// Part of numerator
+			uint8_t	msx_p3_19_16:4;	// Part of denominator
+		}	r47;
+		struct s_r48 {			// MultiSynth0 Parameters
+			uint8_t	msx_p2_15_8;	// Part of fractional numerator
+		}	r48;
+		struct s_r49 {			// MultiSynth0 Parameters
+			uint8_t	msx_p2_7_0;	// Part of fractional numerator
+		}	r49;
+	} m0,					// r42..r49
+	m1, 					// r50..r57
+	m2;					// r58..r65
 
 	struct s_r149 {			// Spread Spectrum Parameters
 		uint8_t	ssdn_p2_14_8:7;	// PLL A Spread Spectrum Down P2
@@ -194,6 +236,18 @@ typedef struct s_Si5351A Si5351A;
 
 void Si5351A_init(Si5351A *si,uint8_t i2c_addr,i2c_readcb_t readcb,i2c_writecb_t writecb,void *arg);
 void Si5351A_device_reset(Si5351A *si);
+bool Si5351A_is_busy(Si5351A *si);
+void Si5351A_clock_enable(Si5351A *si,Clock clock,bool on);
+void Si5351A_clock_enable_pin(Si5351A *si,Clock clock,bool enable);
+void Si5351A_clock_power(Si5351A *si,Clock clock,bool on);
+void Si5351A_clock_msynth(Si5351A *si,Clock clock,MultiSynthMode mode);
+void Si5351A_clock_polarity(Si5351A *si,Clock clock,bool invert);
+void Si5351A_clock_insrc(Si5351A *si,Clock clock,ClockSource src);
+void Si5351A_clock_drive(Si5351A *si,Clock clock,ClockDrive drv);
+void Si5351A_clock_disable_state(Si5351A *si,Clock clock,DisState state);
+void Si5351A_msynth_param(Si5351A *si,MultiSynth msynth,MSynthParam param,uint32_t value);
+void Si5351A_msynth_div(Si5351A *si,MultiSynth msynth,RxDiv div);
+void Si5351A_clock_intmask(Si5351A *si,PLL pll,bool mask);
 
 #ifdef __cplusplus
 }
