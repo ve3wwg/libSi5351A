@@ -18,8 +18,8 @@ OBJS	=
 
 all:	libsi5351a.a
 
-libuguif.a: libsi5351a.o
-	ar cr libsi5351a.a si5351a..o
+libsi5351a.a: si5351a.o
+	ar cr libsi5351a.a si5351a.o
 
 clean:
 	rm -f *.o core .errs.t
