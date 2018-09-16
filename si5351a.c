@@ -31,30 +31,30 @@ static const struct s_reg {
 	{ 17,	Offset(r17) },	
 	{ 18,	Offset(r18) },	
 	{ 24,	Offset(r24) },	
-	{ 42,	Offset(m0.r42) },	
-	{ 43,	Offset(m0.r43) },	
-	{ 44,	Offset(m0.r44) },	
-	{ 45,	Offset(m0.r45) },	
-	{ 46,	Offset(m0.r46) },	
-	{ 47,	Offset(m0.r47) },	
-	{ 48,	Offset(m0.r48) },	
-	{ 49,	Offset(m0.r49) },	
-	{ 50,	Offset(m1.r42) },	
-	{ 51,	Offset(m1.r43) },	
-	{ 52,	Offset(m1.r44) },	
-	{ 53,	Offset(m1.r45) },	
-	{ 54,	Offset(m1.r46) },	
-	{ 55,	Offset(m1.r47) },	
-	{ 56,	Offset(m1.r48) },	
-	{ 57,	Offset(m1.r49) },	
-	{ 58,	Offset(m2.r42) },	
-	{ 59,	Offset(m2.r43) },	
-	{ 60,	Offset(m2.r44) },	
-	{ 61,	Offset(m2.r45) },	
-	{ 62,	Offset(m2.r46) },	
-	{ 63,	Offset(m2.r47) },	
-	{ 64,	Offset(m2.r48) },	
-	{ 65,	Offset(m2.r49) },	
+	{ 42,	Offset(m[0].r42) },	
+	{ 43,	Offset(m[0].r43) },	
+	{ 44,	Offset(m[0].r44) },	
+	{ 45,	Offset(m[0].r45) },	
+	{ 46,	Offset(m[0].r46) },	
+	{ 47,	Offset(m[0].r47) },	
+	{ 48,	Offset(m[0].r48) },	
+	{ 49,	Offset(m[0].r49) },	
+	{ 50,	Offset(m[1].r42) },	
+	{ 51,	Offset(m[1].r43) },	
+	{ 52,	Offset(m[1].r44) },	
+	{ 53,	Offset(m[1].r45) },	
+	{ 54,	Offset(m[1].r46) },	
+	{ 55,	Offset(m[1].r47) },	
+	{ 56,	Offset(m[1].r48) },	
+	{ 57,	Offset(m[1].r49) },	
+	{ 58,	Offset(m[2].r42) },	
+	{ 59,	Offset(m[2].r43) },	
+	{ 60,	Offset(m[2].r44) },	
+	{ 61,	Offset(m[2].r45) },	
+	{ 62,	Offset(m[2].r46) },	
+	{ 63,	Offset(m[2].r47) },	
+	{ 64,	Offset(m[2].r48) },	
+	{ 65,	Offset(m[2].r49) },	
 	{ 149,	Offset(r149) },	
 	{ 150,	Offset(r150) },	
 	{ 151,	Offset(r151) },	
@@ -289,8 +289,8 @@ Si5351A_clock_disable_state(Si5351A *si,Clock clock,DisState state) {
 	write1(si,24,&si->r24);
 }
 
-void
-Si5351A_msynth_param(Si5351A *si,MultiSynth msynth,MSynthParam param,uint32_t value) {
+bool
+Si5351A_msynth_param(Si5351A *si,short msynth,MSynthParam param,uint32_t value) {
 	union u_value {
 		uint32_t	bits_7_0 : 8;
 		uint32_t	bits_15_8 : 8;
@@ -300,20 +300,11 @@ Si5351A_msynth_param(Si5351A *si,MultiSynth msynth,MSynthParam param,uint32_t va
 	struct s_msynth_params *mp;
 	int regoff;
 	
-	switch ( msynth ) {
-	case MSynth0:
-		mp = &si->m0;
-		regoff = 0;
-		break;
-	case MSynth1:
-		mp = &si->m1;
-		regoff = 8;
-		break;
-	case MSynth2:
-		mp = &si->m2;
-		regoff = 16;
-		break;
-	}
+	if ( msynth < 0 || msynth > 2 )
+		return false;	// Unsupported msynth
+
+	mp = &si->m[msynth];
+	regoff = msynth * 8;
 
 	switch ( param ) {
 	case MSynthP1:
@@ -341,31 +332,24 @@ Si5351A_msynth_param(Si5351A *si,MultiSynth msynth,MSynthParam param,uint32_t va
 		write1(si,regoff+47,&mp->r47);
 		break;
 	}
+	return true;
 }
 
-void
-Si5351A_msynth_div(Si5351A *si,MultiSynth msynth,RxDiv div) {
+bool
+Si5351A_msynth_div(Si5351A *si,short msynth,RxDiv div) {
 	struct s_msynth_params *mp;
 	int regoff;
 	unsigned udiv = (unsigned)div;
 	
-	switch ( msynth ) {
-	case MSynth0:
-		mp = &si->m0;
-		regoff = 0;
-		break;
-	case MSynth1:
-		mp = &si->m1;
-		regoff = 8;
-		break;
-	case MSynth2:
-		mp = &si->m2;
-		regoff = 16;
-		break;
-	}
+	if ( msynth < 0 || msynth > 2 )
+		return false;	// Unsupported msynth
+
+	mp = &si->m[msynth];
+	regoff = msynth * 8;
 
 	mp->r44.rx_div = udiv;
 	write1(si,regoff+44,&mp->r44);
+	return true;
 }
 
 void

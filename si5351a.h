@@ -48,11 +48,13 @@ typedef enum {
 	DisNever = 0b11
 } DisState;
 
+#if 0
 typedef enum {
 	MSynth0 = 0,
 	MSynth1,
 	MSynth2
 } MultiSynth;
+#endif
 
 typedef enum {
 	MSynthP1,
@@ -156,9 +158,7 @@ struct s_Si5351A {			// Si5351A Register Definitions
 		struct s_r49 {			// MultiSynth0 Parameters
 			uint8_t	msx_p2_7_0;	// Part of fractional numerator
 		}	r49;
-	} m0,					// r42..r49
-	m1, 					// r50..r57
-	m2;					// r58..r65
+	} m[3];					// r42..r49, r50..r57, r58..r65
 
 	struct s_r149 {			// Spread Spectrum Parameters
 		uint8_t	ssdn_p2_14_8:7;	// PLL A Spread Spectrum Down P2
@@ -245,8 +245,8 @@ void Si5351A_clock_polarity(Si5351A *si,Clock clock,bool invert);
 void Si5351A_clock_insrc(Si5351A *si,Clock clock,ClockSource src);
 void Si5351A_clock_drive(Si5351A *si,Clock clock,ClockDrive drv);
 void Si5351A_clock_disable_state(Si5351A *si,Clock clock,DisState state);
-void Si5351A_msynth_param(Si5351A *si,MultiSynth msynth,MSynthParam param,uint32_t value);
-void Si5351A_msynth_div(Si5351A *si,MultiSynth msynth,RxDiv div);
+bool Si5351A_msynth_param(Si5351A *si,short msynth,MSynthParam param,uint32_t value);
+bool Si5351A_msynth_div(Si5351A *si,short msynth,RxDiv div);
 void Si5351A_clock_intmask(Si5351A *si,PLL pll,bool mask);
 
 #ifdef __cplusplus
