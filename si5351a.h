@@ -249,6 +249,7 @@ void Si5351A_clock_intmask(Si5351A *si,PLL pll,bool mask);
 void Si5351A_xtal_cap(Si5351A *si,XtalCap cap);
 void Si5351A_pll_reset(Si5351A *si,PLL pll);
 bool Si5351A_pll_is_reset(Si5351A *si,PLL pll);
+uint32_t Si5351A_set_frequency(Si5351A *si,uint32_t rate,uint32_t xtal_freq,short msynth);
 
 #ifdef __cplusplus
 }

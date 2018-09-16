@@ -14,6 +14,14 @@
 #include <memory.h>
 
 #include "si5351a.h"
+#include "rational.h"
+
+#define SI5351_PLL_VCO_MIN              600000000
+#define SI5351_PLL_VCO_MAX              900000000
+#define SI5351_PLL_A_MIN                15
+#define SI5351_PLL_A_MAX                90
+#define SI5351_PLL_B_MAX                (SI5351_PLL_C_MAX-1)
+#define SI5351_PLL_C_MAX                1048575
 
 #define Offset(member) (uint16_t)(((uint8_t*)&(((Si5351A*)0)->member)) - ((uint8_t*)0))
 
@@ -400,17 +408,18 @@ Si5351A_pll_is_reset(Si5351A *si,PLL pll) {
 void
 Si5351A_device_reset(Si5351A *si,XtalCap cap) {
 
+#ifndef TEST
 	while ( Si5351A_is_busy(si) )
 		;
 	read_all(si);	
+#endif
 	si->r177.plla_rst = 1;
 	si->r177.pllb_rst = 1;
+#ifndef TEST
 	while ( !Si5351A_pll_is_reset(si,PLLA) );
 	while ( !Si5351A_pll_is_reset(si,PLLB) );
+#endif
 	write1(si,177,&si->r177);
-	do	{
-		read1(si,177,&si->r177);
-	} while ( si->r177.plla_rst || si->r177.pllb_rst );
 
 	Si5351A_clock_enable_pin(si,Clock0,false);
 	Si5351A_clock_enable_pin(si,Clock1,false);
@@ -446,6 +455,57 @@ Si5351A_device_reset(Si5351A *si,XtalCap cap) {
 	Si5351A_clock_disable_state(si,Clock1,DisHiZ);
 	Si5351A_clock_disable_state(si,Clock2,DisHiZ);
 
+}
+
+uint32_t
+Si5351A_set_frequency(Si5351A *si,uint32_t rate,uint32_t xtal_freq,short msynth) {
+	uint32_t rfrac, denom, a, b, c;
+	uint64_t lltmp;
+
+	if ( msynth < 0 || msynth > 2 )
+		return 0;
+
+	if (rate < SI5351_PLL_VCO_MIN)
+		rate = SI5351_PLL_VCO_MIN;
+	if (rate > SI5351_PLL_VCO_MAX)
+		rate = SI5351_PLL_VCO_MAX;
+
+	a = rate / xtal_freq;	
+	
+	if ( a < SI5351_PLL_A_MIN )
+		rate = xtal_freq * SI5351_PLL_A_MIN;
+	if ( a > SI5351_PLL_A_MAX )
+		rate = xtal_freq * SI5351_PLL_A_MAX;
+
+	// find best approximation for b/c = fVCO mod fIN
+	denom = 1000 * 1000;
+	lltmp = rate % xtal_freq;
+	lltmp *= denom;
+	lltmp /= xtal_freq;
+	rfrac = (uint32_t)lltmp;
+	
+	b = 0;
+	c = 1;
+	if ( rfrac )
+		rational_best_approximation(rfrac,denom,SI5351_PLL_B_MAX,SI5351_PLL_C_MAX,&b,&c);
+	{
+		uint32_t p1 = 128 * a;
+		p1 += (128 * b / c);
+		p1 -= 512;
+
+		Si5351A_msynth_param(si,msynth,MSynthP3,c);
+		Si5351A_msynth_param(si,msynth,MSynthP2,(128 * b) % c);
+		Si5351A_msynth_param(si,msynth,MSynthP1,p1);
+	}
+
+	// recalculate rate by fIN * (a + b/c)
+	lltmp  = xtal_freq;
+	lltmp *= b;
+	lltmp /= c;
+	
+	rate = (unsigned long)lltmp;
+	rate += xtal_freq * a;
+	return rate;
 }
 
 // End si5351a.c
