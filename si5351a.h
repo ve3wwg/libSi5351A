@@ -48,14 +48,6 @@ typedef enum {
 	DisNever = 0b11
 } DisState;
 
-#if 0
-typedef enum {
-	MSynth0 = 0,
-	MSynth1,
-	MSynth2
-} MultiSynth;
-#endif
-
 typedef enum {
 	MSynthP1,
 	MSynthP2,
@@ -72,6 +64,12 @@ typedef enum {
 	RxDiv64 = 0b110,
 	RxDiv128 = 0b111
 } RxDiv;
+
+typedef enum {
+	Cap6pF = 0b01,
+	Cap8pF = 0b10,
+	Cap10pF = 0b11
+} XtalCap;
 
 struct s_Si5351A {			// Si5351A Register Definitions
 	struct s_r0 {			// Device status
@@ -234,8 +232,8 @@ struct s_Si5351A {			// Si5351A Register Definitions
 
 typedef struct s_Si5351A Si5351A;
 
-void Si5351A_init(Si5351A *si,uint8_t i2c_addr,i2c_readcb_t readcb,i2c_writecb_t writecb,void *arg);
-void Si5351A_device_reset(Si5351A *si);
+void Si5351A_init(Si5351A *si,uint8_t i2c_addr,i2c_readcb_t readcb,i2c_writecb_t writecb,void *arg,XtalCap cap);
+void Si5351A_device_reset(Si5351A *si,XtalCap cap);
 bool Si5351A_is_busy(Si5351A *si);
 void Si5351A_clock_enable(Si5351A *si,Clock clock,bool on);
 void Si5351A_clock_enable_pin(Si5351A *si,Clock clock,bool enable);
@@ -248,6 +246,9 @@ void Si5351A_clock_disable_state(Si5351A *si,Clock clock,DisState state);
 bool Si5351A_msynth_param(Si5351A *si,short msynth,MSynthParam param,uint32_t value);
 bool Si5351A_msynth_div(Si5351A *si,short msynth,RxDiv div);
 void Si5351A_clock_intmask(Si5351A *si,PLL pll,bool mask);
+void Si5351A_xtal_cap(Si5351A *si,XtalCap cap);
+void Si5351A_pll_reset(Si5351A *si,PLL pll);
+bool Si5351A_pll_is_reset(Si5351A *si,PLL pll);
 
 #ifdef __cplusplus
 }

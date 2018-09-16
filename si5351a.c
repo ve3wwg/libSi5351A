@@ -105,12 +105,13 @@ read1(Si5351A *si,uint8_t reg,void *dat) {
 }
 
 void
-Si5351A_init(Si5351A *si,uint8_t i2c_addr,i2c_readcb_t readcb,i2c_writecb_t writecb,void *arg) {
+Si5351A_init(Si5351A *si,uint8_t i2c_addr,i2c_readcb_t readcb,i2c_writecb_t writecb,void *arg,XtalCap cap) {
 
 	memset(si,0,sizeof *si);
 	si->i2c_read = readcb;
 	si->i2c_write = writecb;
 	si->arg = arg;
+	Si5351A_device_reset(si,cap);
 }
 
 bool
@@ -367,14 +368,45 @@ Si5351A_clock_intmask(Si5351A *si,PLL pll,bool mask) {
 }
 
 void
-Si5351A_device_reset(Si5351A *si) {
-	
+Si5351A_xtal_cap(Si5351A *si,XtalCap cap) {
+
+	si->r183.xtal_cl = (uint8_t)cap;
+}
+
+void
+Si5351A_pll_reset(Si5351A *si,PLL pll) {
+
+	switch ( pll ) {
+	case PLLA:
+		si->r177.plla_rst = 1;
+		break;
+	case PLLB:
+		si->r177.pllb_rst = 1;
+		break;
+	}
+}
+
+bool
+Si5351A_pll_is_reset(Si5351A *si,PLL pll) {
+
+	switch ( pll ) {
+	case PLLA:
+		return !si->r177.plla_rst;
+	case PLLB:
+		return !si->r177.pllb_rst;
+	}
+}
+
+void
+Si5351A_device_reset(Si5351A *si,XtalCap cap) {
 
 	while ( Si5351A_is_busy(si) )
 		;
 	read_all(si);	
 	si->r177.plla_rst = 1;
 	si->r177.pllb_rst = 1;
+	while ( !Si5351A_pll_is_reset(si,PLLA) );
+	while ( !Si5351A_pll_is_reset(si,PLLB) );
 	write1(si,177,&si->r177);
 	do	{
 		read1(si,177,&si->r177);
@@ -392,6 +424,8 @@ Si5351A_device_reset(Si5351A *si) {
 	Si5351A_clock_power(si,Clock1,false);
 	Si5351A_clock_power(si,Clock2,false);
 	
+	Si5351A_xtal_cap(si,cap);
+
 	// Only choice for Si5351A:
 	si->r15.pllb_src = 0;
 	si->r15.plla_src = 0;
