@@ -25,6 +25,13 @@
 
 #define Offset(member) (uint16_t)(((uint8_t*)&(((Si5351A*)0)->member)) - ((uint8_t*)0))
 
+typedef union {
+	uint32_t	bits_7_0 : 8;
+	uint32_t	bits_15_8 : 8;
+	uint32_t	bits_19_16 : 4;
+	uint32_t	unused : 12;
+} u_value;
+
 static const struct s_reg {
 	uint8_t		reg;
 	uint16_t	offset;
@@ -39,6 +46,22 @@ static const struct s_reg {
 	{ 17,	Offset(r17) },	
 	{ 18,	Offset(r18) },	
 	{ 24,	Offset(r24) },	
+	{ 26,	Offset(pll[0].r26) },
+	{ 27,	Offset(pll[0].r27) },
+	{ 28,	Offset(pll[0].r28) },
+	{ 29,	Offset(pll[0].r29) },
+	{ 30,	Offset(pll[0].r30) },
+	{ 31,	Offset(pll[0].r31) },
+	{ 32,	Offset(pll[0].r32) },
+	{ 33,	Offset(pll[0].r33) },
+	{ 34,	Offset(pll[1].r26) },
+	{ 35,	Offset(pll[1].r27) },
+	{ 36,	Offset(pll[1].r28) },
+	{ 37,	Offset(pll[1].r29) },
+	{ 38,	Offset(pll[1].r30) },
+	{ 39,	Offset(pll[1].r31) },
+	{ 40,	Offset(pll[1].r32) },
+	{ 41,	Offset(pll[1].r33) },
 	{ 42,	Offset(m[0].r42) },	
 	{ 43,	Offset(m[0].r43) },	
 	{ 44,	Offset(m[0].r44) },	
@@ -95,11 +118,11 @@ readbuf(Si5351A *si,uint8_t reg,uint8_t *buf,uint8_t buflen) {
 
 static int
 writebuf(Si5351A *si,uint8_t reg,uint8_t *buf,uint8_t buflen) {
-	int n;
+	uint8_t iobuf[1+buflen];
 
-	if ( (n = si->i2c_write(si->i2c_addr,&reg,1)) != buflen )
-		return -1;
-	return si->i2c_write(si->i2c_addr,buf,buflen);
+	iobuf[0] = reg;
+	memcpy(iobuf+1,buf,buflen);
+	return si->i2c_write(si->i2c_addr,iobuf,1+buflen);
 }
 
 static int
@@ -116,6 +139,7 @@ void
 Si5351A_init(Si5351A *si,uint8_t i2c_addr,i2c_readcb_t readcb,i2c_writecb_t writecb,void *arg,XtalCap cap) {
 
 	memset(si,0,sizeof *si);
+	si->i2c_addr = i2c_addr;
 	si->i2c_read = readcb;
 	si->i2c_write = writecb;
 	si->arg = arg;
@@ -299,49 +323,28 @@ Si5351A_clock_disable_state(Si5351A *si,Clock clock,DisState state) {
 }
 
 bool
-Si5351A_msynth_param(Si5351A *si,short msynth,MSynthParam param,uint32_t value) {
-	union u_value {
-		uint32_t	bits_7_0 : 8;
-		uint32_t	bits_15_8 : 8;
-		uint32_t	bits_19_16 : 4;
-		uint32_t	unused : 12;
-	} *pvalue = (union u_value *)&value;
+Si5351A_set_msynth(Si5351A *si,short msynthx,uint32_t A,uint32_t B,uint32_t C) {
+	u_value *pA = (u_value*)&A, *pB = (u_value*)&B, *pC = (u_value*)&C;
 	struct s_msynth_params *mp;
-	int regoff;
 	
-	if ( msynth < 0 || msynth > 2 )
+	if ( msynthx < 0 || msynthx > 2 )
 		return false;	// Unsupported msynth
 
-	mp = &si->m[msynth];
-	regoff = msynth * 8;
+	mp = &si->m[msynthx];
 
-	switch ( param ) {
-	case MSynthP1:
-		mp->r44.msx_p1_17_16 = pvalue->bits_19_16;
-		mp->r45.msx_p1_15_8 = pvalue->bits_15_8;
-		mp->r46.msx_p1_7_0 = pvalue->bits_7_0;
-		write1(si,regoff+44,&mp->r44);
-		write1(si,regoff+45,&mp->r45);
-		write1(si,regoff+46,&mp->r46);
-		break;
-	case MSynthP2:
-		mp->r47.msx_p2_19_16 = pvalue->bits_19_16;
-		mp->r48.msx_p2_15_8 = pvalue->bits_15_8;
-		mp->r49.msx_p2_7_0 = pvalue->bits_7_0;
-		write1(si,regoff+47,&mp->r47);
-		write1(si,regoff+48,&mp->r48);
-		write1(si,regoff+49,&mp->r49);
-		break;
-	case MSynthP3:
-		mp->r42.msx_p3_15_8 = pvalue->bits_15_8;
-		mp->r43.msx_p3_7_0 = pvalue->bits_7_0;
-		mp->r47.msx_p3_19_16 = pvalue->bits_19_16;
-		write1(si,regoff+42,&mp->r42);
-		write1(si,regoff+43,&mp->r43);
-		write1(si,regoff+47,&mp->r47);
-		break;
-	}
-	return true;
+	mp->r46.msx_p1_7_0 = pA->bits_7_0;	// Integer
+	mp->r45.msx_p1_15_8 = pA->bits_15_8;
+	mp->r44.msx_p1_17_16 = pA->bits_19_16;	// Cheat (drops upper bits)
+
+	mp->r49.msx_p2_7_0 = pB->bits_7_0;
+	mp->r48.msx_p2_15_8 = pB->bits_15_8;
+	mp->r47.msx_p2_19_16 = pB->bits_19_16;
+
+	mp->r43.msx_p3_7_0 = pC->bits_7_0;
+	mp->r42.msx_p3_15_8 = pC->bits_15_8;
+	mp->r47.msx_p3_19_16 = pC->bits_19_16;
+
+	return writebuf(si,42+msynthx*8,(void*)&mp->r42,8) == 8;
 }
 
 bool
@@ -397,12 +400,11 @@ Si5351A_pll_reset(Si5351A *si,PLL pll) {
 bool
 Si5351A_pll_is_reset(Si5351A *si,PLL pll) {
 
-	switch ( pll ) {
-	case PLLA:
+	read1(si,177,&si->r177);
+
+	if ( pll == PLLA )
 		return !si->r177.plla_rst;
-	case PLLB:
-		return !si->r177.pllb_rst;
-	}
+	else	return !si->r177.pllb_rst;
 }
 
 void
@@ -457,55 +459,27 @@ Si5351A_device_reset(Si5351A *si,XtalCap cap) {
 
 }
 
-uint32_t
-Si5351A_set_frequency(Si5351A *si,uint32_t rate,uint32_t xtal_freq,short msynth) {
-	uint32_t rfrac, denom, a, b, c;
-	uint64_t lltmp;
+bool
+Si5351A_set_pll(Si5351A *si,short pllx,uint32_t A,uint32_t B,uint32_t C) {
+	struct s_pll *pll = &si->pll[pllx];
+	u_value *pA = (u_value*)&A, *pB = (u_value*)&B, *pC = (u_value*)&C;
 
-	if ( msynth < 0 || msynth > 2 )
-		return 0;
+	if ( pllx < 0 || pllx > 1 )
+		return false;
 
-	if (rate < SI5351_PLL_VCO_MIN)
-		rate = SI5351_PLL_VCO_MIN;
-	if (rate > SI5351_PLL_VCO_MAX)
-		rate = SI5351_PLL_VCO_MAX;
+	pll->r30.msnx_p1_7_0 = pA->bits_7_0;	// Integer
+	pll->r29.msnx_p1_15_8 = pA->bits_15_8;
+	pll->r28.msnx_p1_17_16 = pA->bits_19_16; // Cheat (drops high order bits)
 
-	a = rate / xtal_freq;	
-	
-	if ( a < SI5351_PLL_A_MIN )
-		rate = xtal_freq * SI5351_PLL_A_MIN;
-	if ( a > SI5351_PLL_A_MAX )
-		rate = xtal_freq * SI5351_PLL_A_MAX;
+	pll->r33.msnx_p2_7_0 = pB->bits_7_0;	// Numerator
+	pll->r32.msnx_p2_15_8 = pB->bits_15_8;
+	pll->r31.msnx_p2_19_16 = pB->bits_19_16;
 
-	// find best approximation for b/c = fVCO mod fIN
-	denom = 1000 * 1000;
-	lltmp = rate % xtal_freq;
-	lltmp *= denom;
-	lltmp /= xtal_freq;
-	rfrac = (uint32_t)lltmp;
-	
-	b = 0;
-	c = 1;
-	if ( rfrac )
-		rational_best_approximation(rfrac,denom,SI5351_PLL_B_MAX,SI5351_PLL_C_MAX,&b,&c);
-	{
-		uint32_t p1 = 128 * a;
-		p1 += (128 * b / c);
-		p1 -= 512;
+	pll->r27.msnx_p3_7_0 = pC->bits_7_0;	// Denominator
+	pll->r26.msnx_p3_15_8 = pC->bits_15_8;
+	pll->r31.msnx_p3_19_16 = pC->bits_19_16;
 
-		Si5351A_msynth_param(si,msynth,MSynthP3,c);
-		Si5351A_msynth_param(si,msynth,MSynthP2,(128 * b) % c);
-		Si5351A_msynth_param(si,msynth,MSynthP1,p1);
-	}
-
-	// recalculate rate by fIN * (a + b/c)
-	lltmp  = xtal_freq;
-	lltmp *= b;
-	lltmp /= c;
-	
-	rate = (unsigned long)lltmp;
-	rate += xtal_freq * a;
-	return rate;
+	return writebuf(si,26+pllx*8,(void*)&pll->r26,8) == 8;
 }
 
 // End si5351a.c

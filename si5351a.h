@@ -126,6 +126,37 @@ struct s_Si5351A {			// Si5351A Register Definitions
 		uint8_t	unused : 2;
 	}	r24;
 
+	// PLL Parameters:
+	struct s_pll {
+		struct s_r26 {
+			uint8_t	msnx_p3_15_8;
+		} r26;
+		struct s_r27 {
+			uint8_t	msnx_p3_7_0;
+		} r27;
+		struct s_r28 {
+			uint8_t	msnx_p1_17_16 : 2;
+			uint8_t reserved : 2;
+			uint8_t unused : 4;
+		} r28;
+		struct s_r29 {
+			uint8_t	msnx_p1_15_8;
+		} r29;
+		struct s_r30 {
+			uint8_t	msnx_p1_7_0;
+		} r30;
+		struct s_r31 {
+			uint8_t	msnx_p2_19_16 : 4;
+			uint8_t msnx_p3_19_16 : 4;
+		} r31;
+		struct s_r32 {
+			uint8_t	msnx_p2_15_8;
+		} r32;
+		struct s_r33 {
+			uint8_t	msnx_p2_7_0;
+		} r33;
+	} pll[2];
+
 	// MultiSynth Parameters:
 	struct s_msynth_params {
 		struct s_r42 {			// MultiSynth0 Parameters
@@ -243,13 +274,14 @@ void Si5351A_clock_polarity(Si5351A *si,Clock clock,bool invert);
 void Si5351A_clock_insrc(Si5351A *si,Clock clock,ClockSource src);
 void Si5351A_clock_drive(Si5351A *si,Clock clock,ClockDrive drv);
 void Si5351A_clock_disable_state(Si5351A *si,Clock clock,DisState state);
-bool Si5351A_msynth_param(Si5351A *si,short msynth,MSynthParam param,uint32_t value);
-bool Si5351A_msynth_div(Si5351A *si,short msynth,RxDiv div);
 void Si5351A_clock_intmask(Si5351A *si,PLL pll,bool mask);
 void Si5351A_xtal_cap(Si5351A *si,XtalCap cap);
 void Si5351A_pll_reset(Si5351A *si,PLL pll);
 bool Si5351A_pll_is_reset(Si5351A *si,PLL pll);
-uint32_t Si5351A_set_frequency(Si5351A *si,uint32_t rate,uint32_t xtal_freq,short msynth);
+
+bool Si5351A_set_pll(Si5351A *si,short pllx,uint32_t A,uint32_t B,uint32_t C);
+bool Si5351A_set_msynth(Si5351A *si,short msynthx,uint32_t A,uint32_t B,uint32_t C);
+bool Si5351A_msynth_div(Si5351A *si,short msynth,RxDiv div);
 
 #ifdef __cplusplus
 }
