@@ -1,4 +1,4 @@
-//////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
 // pi_gen.c -- Pi Test Bed for Si5351a.c
 // Date: Sun Sep 16 17:03:00 2018   (C) ve3wwg@gmail.com
 ///////////////////////////////////////////////////////////////////////
@@ -90,10 +90,17 @@ main(int argc,char **argv) {
 
 	Si5351A_init(&si,0x60,readcb,writecb,&si,Cap6pF);
 	
+	puts("Initialized, enabling\n");
+
+	Si5351A_clock_power(&si,Clock0,true);
+	Si5351A_clock_insrc(&si,Clock0,MSynth_Source);
+	Si5351A_clock_pll(&si,Clock0,PLLA);
+	Si5351A_clock_msynth(&si,Clock0,FractionalMode);
 	Si5351A_set_pll(&si,0,24,0,1048575);
 	Si5351A_set_msynth(&si,0,90,0,1048575);
 	Si5351A_msynth_div(&si,0,RxDiv4);
 	Si5351A_clock_enable(&si,Clock0,true);
+	Si5351A_clock_enable_pin(&si,Clock0,false);
 
 	close(i2c_fd);
 }

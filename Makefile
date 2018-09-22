@@ -2,7 +2,7 @@ CC	= gcc
 CXX	= g++
 STD	= -std=c++11
 OPTS	= -Wall
-DBG	= -O0 -g
+DBG	= -Os -g
 INCL	= -I.
 WARN	= -Wno-nonportable-include-path
 .SUFFIXES: .xo
@@ -19,7 +19,7 @@ CXXFLAGS = $(STD) $(OPTS) $(DBG) $(INCL) $(WARN)
 .cpp.o:
 	$(CXX) -c $(CFLAGS) $< -o $*.o
 
-OBJS	= si5351a.o rational.o
+OBJS	= si5351a.o # rational.o
 
 all:	libsi5351a.a pi_gen
 

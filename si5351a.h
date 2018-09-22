@@ -168,7 +168,7 @@ struct s_Si5351A {			// Si5351A Register Definitions
 		struct s_r44 {			// MultiSynth0 Parameters
 			uint8_t	msx_p1_17_16:2;	// integer part of divider
 			uint8_t	reserved : 2;
-			uint8_t	rx_div : 2;	// 000=1,001=2,010=4,011=8,100=16,101=32,110=64,111=128
+			uint8_t	rx_div : 3;	// 000=1,001=2,010=4,011=8,100=16,101=32,110=64,111=128
 	 		uint8_t	unused : 1;	
 		}	r44;
 		struct s_r45 {			// MultiSynth0 Parameters
@@ -272,6 +272,7 @@ void Si5351A_clock_power(Si5351A *si,Clock clock,bool on);
 void Si5351A_clock_msynth(Si5351A *si,Clock clock,MultiSynthMode mode);
 void Si5351A_clock_polarity(Si5351A *si,Clock clock,bool invert);
 void Si5351A_clock_insrc(Si5351A *si,Clock clock,ClockSource src);
+void Si5351A_clock_pll(Si5351A *si,Clock clock,PLL pll);
 void Si5351A_clock_drive(Si5351A *si,Clock clock,ClockDrive drv);
 void Si5351A_clock_disable_state(Si5351A *si,Clock clock,DisState state);
 void Si5351A_clock_intmask(Si5351A *si,PLL pll,bool mask);
