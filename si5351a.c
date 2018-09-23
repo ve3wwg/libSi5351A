@@ -14,7 +14,6 @@
 #include <memory.h>
 
 #include "si5351a.h"
-#include "rational.h"
 
 #define SI5351_PLL_VCO_MIN              600000000
 #define SI5351_PLL_VCO_MAX              900000000

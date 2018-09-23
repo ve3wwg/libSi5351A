@@ -4,17 +4,12 @@ STD	= -std=c++11
 OPTS	= -Wall
 DBG	= -Os -g
 INCL	= -I.
-WARN	= -Wno-nonportable-include-path
-.SUFFIXES: .xo
 
 CFLAGS	= $(OPTS) $(DBG) $(INCL) $(WARN)
 CXXFLAGS = $(STD) $(OPTS) $(DBG) $(INCL) $(WARN)
 
 .c.o:
 	$(CC) -c $(CFLAGS) $< -o $*.o
-
-.c.xo:
-	$(CC) -c $(CFLAGS) -DTEST -Wno-unused-function $< -o $*.xo
 
 .cpp.o:
 	$(CXX) -c $(CFLAGS) $< -o $*.o
@@ -28,4 +23,4 @@ clean:
 	rm -f *.o *.xo core .errs.t
 
 clobber: clean
-	rm -f *.a testbed
+	rm -f *.a pi_gen
