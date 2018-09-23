@@ -26,10 +26,13 @@
 #define Offset(member) (uint16_t)(((uint8_t*)&(((Si5351A*)0)->member)) - ((uint8_t*)0))
 
 typedef union {
-	uint32_t	bits_7_0 : 8;
-	uint32_t	bits_15_8 : 8;
-	uint32_t	bits_19_16 : 4;
-	uint32_t	unused : 12;
+	struct {
+		uint32_t	bits_7_0 : 8;
+		uint32_t	bits_15_8 : 8;
+		uint32_t	bits_19_16 : 4;
+		uint32_t	unused : 12;
+	} 		parts;
+	uint32_t	u;
 } u_value;
 
 static const struct s_reg {
@@ -152,18 +155,6 @@ Si5351A_is_busy(Si5351A *si) {
 	read1(si,0,&si->r0);
 	return si->r0.sys_init;
 }
-
-#if 0
-static uint8_t *
-register_addr(Si5351A *si,uint8_t reg) {
-
-	for ( unsigned x=0; regs[x].reg != 255; ++x )
-		if ( regs[x].reg == reg )
-			return ((uint8_t *)si) + regs[x].offset;
-
-	return 0;	// Not found
-}
-#endif
 
 static void
 read_all(Si5351A *si) {
@@ -344,34 +335,68 @@ Si5351A_clock_disable_state(Si5351A *si,Clock clock,DisState state) {
 
 bool
 Si5351A_set_msynth(Si5351A *si,short msynthx,uint32_t A,uint32_t B,uint32_t C) {
-	struct s_msynth_params *mp;
-	uint32_t P2 = (128u * B) % C;
-	uint32_t P1 = 128u * A;
-	u_value *pA = (u_value*)&P1, *pB = (u_value*)&P2, *pC = (u_value*)&C;
+	u_value P1, P2, P3;
 
-	P1 += (128 * B / C);
-	P1 -= 512;
+	P2.u = (128u * B) % C;
+	P1.u = 128u * A;
+	P1.u += (128 * B / C);
+	P1.u -= 512;
+	P3.u = C;
 
-printf("set_msynth(A=%X,B=%X,C=%X) P1=%X, P2=%X. P3=C\n",(unsigned)A,(unsigned)B,(unsigned)C,(unsigned)P1,(unsigned)P2);
+	//////////////////////////////////////////////////////////////
+	// Unfortunately, due to an ARM gcc bug, we cannot take an
+	// address of &si->m[msynthx] correctly. So use the switch
+	// statement below to generate correct code.
+	// gcc (Raspbian 6.3.0-18+rpi1+deb9u1) 6.3.0 20170516
+	//////////////////////////////////////////////////////////////
 
-	if ( msynthx < 0 || msynthx > 2 )
-		return false;	// Unsupported msynth
+	switch ( msynthx ) {
+	case 0:
+		si->m[0].r46.msx_p1_7_0 = P1.parts.bits_7_0;	// Integer
+		si->m[0].r45.msx_p1_15_8 = P1.parts.bits_15_8;
+		si->m[0].r44.msx_p1_17_16 = P1.parts.bits_19_16;// Cheat (drops upper bits)
 
-	mp = &si->m[msynthx];
+		si->m[0].r49.msx_p2_7_0 = P2.parts.bits_7_0;
+		si->m[0].r48.msx_p2_15_8 = P2.parts.bits_15_8;
+		si->m[0].r47.msx_p2_19_16 = P2.parts.bits_19_16;
 
-	mp->r46.msx_p1_7_0 = pA->bits_7_0;	// Integer
-	mp->r45.msx_p1_15_8 = pA->bits_15_8;
-	mp->r44.msx_p1_17_16 = pA->bits_19_16;	// Cheat (drops upper bits)
+		si->m[0].r43.msx_p3_7_0 = P3.parts.bits_7_0;
+		si->m[0].r42.msx_p3_15_8 = P3.parts.bits_15_8;
+		si->m[0].r47.msx_p3_19_16 = P3.parts.bits_19_16;
+		
+		return writebuf(si,42+msynthx*8,(uint8_t*)&si->m[0].r42,8) == 8;
+	case 1:
+		si->m[1].r46.msx_p1_7_0 = P1.parts.bits_7_0;	// Integer
+		si->m[1].r45.msx_p1_15_8 = P1.parts.bits_15_8;
+		si->m[1].r44.msx_p1_17_16 = P1.parts.bits_19_16;// Cheat (drops upper bits)
 
-	mp->r49.msx_p2_7_0 = pB->bits_7_0;
-	mp->r48.msx_p2_15_8 = pB->bits_15_8;
-	mp->r47.msx_p2_19_16 = pB->bits_19_16;
+		si->m[1].r49.msx_p2_7_0 = P2.parts.bits_7_0;
+		si->m[1].r48.msx_p2_15_8 = P2.parts.bits_15_8;
+		si->m[1].r47.msx_p2_19_16 = P2.parts.bits_19_16;
 
-	mp->r43.msx_p3_7_0 = pC->bits_7_0;
-	mp->r42.msx_p3_15_8 = pC->bits_15_8;
-	mp->r47.msx_p3_19_16 = pC->bits_19_16;
+		si->m[1].r43.msx_p3_7_0 = P3.parts.bits_7_0;
+		si->m[1].r42.msx_p3_15_8 = P3.parts.bits_15_8;
+		si->m[1].r47.msx_p3_19_16 = P3.parts.bits_19_16;
+		
+		return writebuf(si,42+msynthx*8,(uint8_t*)&si->m[1].r42,8) == 8;
+	case 2:
+		si->m[2].r46.msx_p1_7_0 = P1.parts.bits_7_0;	// Integer
+		si->m[2].r45.msx_p1_15_8 = P1.parts.bits_15_8;
+		si->m[2].r44.msx_p1_17_16 = P1.parts.bits_19_16;// Cheat (drops upper bits)
 
-	return writebuf(si,42+msynthx*8,(void*)&mp->r42,8) == 8;
+		si->m[2].r49.msx_p2_7_0 = P2.parts.bits_7_0;
+		si->m[2].r48.msx_p2_15_8 = P2.parts.bits_15_8;
+		si->m[2].r47.msx_p2_19_16 = P2.parts.bits_19_16;
+
+		si->m[2].r43.msx_p3_7_0 = P3.parts.bits_7_0;
+		si->m[2].r42.msx_p3_15_8 = P3.parts.bits_15_8;
+		si->m[2].r47.msx_p3_19_16 = P3.parts.bits_19_16;
+		
+		return writebuf(si,42+msynthx*8,(uint8_t*)&si->m[2].r42,8) == 8;
+	default:
+		;
+	}
+	return false;
 }
 
 bool
@@ -438,56 +463,94 @@ Si5351A_pll_is_reset(Si5351A *si,PLL pll) {
 
 bool
 Si5351A_set_pll(Si5351A *si,short pllx,uint32_t A,uint32_t B,uint32_t C) {
-	struct s_pll *pll = &si->pll[pllx];
-	uint32_t P2 = (128u * B) % C;
-	uint32_t P1 = 128u * A;
-	u_value *pA = (u_value*)&P1, *pB = (u_value*)&P2, *pC = (u_value*)&C;
+	u_value P1, P2, P3;
 
-	P1 += (128 * B / C);
-	P1 -= 512;
-
-printf("set_pll(A=%X,B=%X,C=%X) P1=%X, P2=%X. P3=C\n",(unsigned)A,(unsigned)B,(unsigned)C,(unsigned)P1,(unsigned)P2);
+	P2.u = (128u * B) % C;
+	P1.u = 128u * A;
+	P1.u += (128 * B / C);
+	P1.u -= 512;
+	P3.u = C;
 
 	if ( pllx < 0 || pllx > 1 )
 		return false;
 
-	pll->r30.msnx_p1_7_0 = pA->bits_7_0;	// Integer
-	pll->r29.msnx_p1_15_8 = pA->bits_15_8;
-	pll->r28.msnx_p1_17_16 = pA->bits_19_16; // Cheat (drops high order bits)
+	//////////////////////////////////////////////////////////////
+	// Unfortunately, due to an ARM gcc bug, we cannot take an
+	// address of &si->pll[plx] correctly. So use the switch
+	// statement below to generate correct code.
+	// gcc (Raspbian 6.3.0-18+rpi1+deb9u1) 6.3.0 20170516
+	//////////////////////////////////////////////////////////////
 
-	pll->r33.msnx_p2_7_0 = pB->bits_7_0;	// Numerator
-	pll->r32.msnx_p2_15_8 = pB->bits_15_8;
-	pll->r31.msnx_p2_19_16 = pB->bits_19_16;
+	switch ( pllx ) {
+	case 0:
+		si->pll[0].r30.msnx_p1_7_0 = P1.parts.bits_7_0;	// Integer
+		si->pll[0].r29.msnx_p1_15_8 = P1.parts.bits_15_8;
+		si->pll[0].r28.msnx_p1_17_16 = P1.parts.bits_19_16; // Cheat (drops high order bits)
 
-	pll->r27.msnx_p3_7_0 = pC->bits_7_0;	// Denominator
-	pll->r26.msnx_p3_15_8 = pC->bits_15_8;
-	pll->r31.msnx_p3_19_16 = pC->bits_19_16;
+		si->pll[0].r33.msnx_p2_7_0 = P2.parts.bits_7_0;	// Numerator
+		si->pll[0].r32.msnx_p2_15_8 = P2.parts.bits_15_8;
+		si->pll[0].r31.msnx_p2_19_16 = P2.parts.bits_19_16;
 
-	return writebuf(si,26+pllx*8,(void*)&pll->r26,8) == 8;
+		si->pll[0].r27.msnx_p3_7_0 = P3.parts.bits_7_0;	// Denominator
+		si->pll[0].r26.msnx_p3_15_8 = P3.parts.bits_15_8;
+		si->pll[0].r31.msnx_p3_19_16 = P3.parts.bits_19_16;
+		return writebuf(si,26,(uint8_t*)&si->pll[0].r26,8) == 8;
+
+	case 1:
+		si->pll[1].r30.msnx_p1_7_0 = P1.parts.bits_7_0;	// Integer
+		si->pll[1].r29.msnx_p1_15_8 = P1.parts.bits_15_8;
+		si->pll[1].r28.msnx_p1_17_16 = P1.parts.bits_19_16; // Cheat (drops high order bits)
+
+		si->pll[1].r33.msnx_p2_7_0 = P2.parts.bits_7_0;	// Numerator
+		si->pll[1].r32.msnx_p2_15_8 = P2.parts.bits_15_8;
+		si->pll[1].r31.msnx_p2_19_16 = P2.parts.bits_19_16;
+
+		si->pll[1].r27.msnx_p3_7_0 = P3.parts.bits_7_0;	// Denominator
+		si->pll[1].r26.msnx_p3_15_8 = P3.parts.bits_15_8;
+		si->pll[1].r31.msnx_p3_19_16 = P3.parts.bits_19_16;
+
+		return writebuf(si,26,(uint8_t*)&si->pll[1].r26,8) == 8;
+
+	default:
+		;
+	}
+
+	return false;
+}
+
+bool
+Si5351A_is_lol(Si5351A *si,PLL pll) {
+
+	read1(si,0,&si->r0);
+	switch ( pll ) {
+	case PLLA:
+		return si->r0.lol_a;
+	case PLLB:
+		return si->r0.lol_b;
+	}
+
+	return false;
 }
 
 void
 Si5351A_device_reset(Si5351A *si,XtalCap cap) {
 
-#ifndef TEST
 	while ( Si5351A_is_busy(si) )
 		;
 	read_all(si);	
-#endif
+	si->r183.b01001 = 0b01001;		// Datasheet errata says this is correct value for r183
+
 	Si5351A_pll_reset(si,PLLA);
 	si->r177.plla_rst = 1;
-#ifndef TEST
+
 	while ( !Si5351A_pll_is_reset(si,PLLA) );
-#endif
 
 	Si5351A_pll_reset(si,PLLB);
 	si->r177.pllb_rst = 1;
 	while ( !Si5351A_pll_is_reset(si,PLLB) );
 	
-#ifndef TEST
 	while ( !Si5351A_pll_is_reset(si,PLLA) );
 	while ( !Si5351A_pll_is_reset(si,PLLB) );
-#endif
 	write1(si,177,&si->r177);
 
 	Si5351A_clock_enable_pin(si,Clock0,false);
@@ -504,8 +567,8 @@ Si5351A_device_reset(Si5351A *si,XtalCap cap) {
 	Si5351A_xtal_cap(si,cap);
 
 	// Only choice for Si5351A:
-	si->r15.pllb_src = 0;
-	si->r15.plla_src = 0;
+	si->r15.pllb_src = 0;		// XTAL
+	si->r15.plla_src = 0;		// XTAL
 	write1(si,15,&si->r15);
 
 	Si5351A_clock_msynth(si,Clock0,FractionalMode);
