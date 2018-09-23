@@ -1,0 +1,4 @@
+*.o
+*.a
+pi_gen
+.errs.t
