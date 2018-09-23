@@ -74,7 +74,10 @@ typedef enum {
 struct s_Si5351A {			// Si5351A Register Definitions
 	struct s_r0 {			// Device status
 		uint8_t	revid : 2;	// R: Device revision ID
-		uint8_t	not_used : 5;	// Not Si5351A
+		uint8_t	reserved : 2;
+		uint8_t	los : 1;	// C model only
+		uint8_t	lol_a : 1;	// R: Loss of lock PLLA
+		uint8_t	lol_b : 1;	// R: Loss of lock PLLB
 		uint8_t	sys_init : 1;	// R: System init status (1=Initializing)
 	}	r0;
 	struct s_r1 {			// Interrupt Status Sticky
@@ -251,7 +254,7 @@ struct s_Si5351A {			// Si5351A Register Definitions
 	}	r177;
 
 	struct s_r183 {			// Crystal Internal Load Capacitance
-		uint8_t	reserved : 6;
+		uint8_t	b01001 : 6;	// Must be written as 0b01001
 		uint8_t	xtal_cl : 2;	// RW: 01=6, 10=8, 11=10 pF (10pF is default)
 	}	r183;
 
@@ -283,6 +286,8 @@ bool Si5351A_pll_is_reset(Si5351A *si,PLL pll);
 bool Si5351A_set_pll(Si5351A *si,short pllx,uint32_t A,uint32_t B,uint32_t C);
 bool Si5351A_set_msynth(Si5351A *si,short msynthx,uint32_t A,uint32_t B,uint32_t C);
 bool Si5351A_msynth_div(Si5351A *si,short msynth,RxDiv div);
+
+bool Si5351A_is_lol(Si5351A *si,PLL pll);
 
 #ifdef __cplusplus
 }
