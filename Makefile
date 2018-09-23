@@ -19,18 +19,10 @@ CXXFLAGS = $(STD) $(OPTS) $(DBG) $(INCL) $(WARN)
 .cpp.o:
 	$(CXX) -c $(CFLAGS) $< -o $*.o
 
-OBJS	= si5351a.o # rational.o
+all:	pi_gen
 
-all:	libsi5351a.a pi_gen
-
-pi_gen:	pi_gen.o libsi5351a.a
-	$(CC) pi_gen.o -L. -lsi5351a -o ./pi_gen
-
-testbed: testbed.o si5351a.xo libsi5351a.a
-	$(CXX) testbed.o si5351a.xo -L. -lsi5351a -o ./testbed
-
-libsi5351a.a: $(OBJS)
-	ar cr libsi5351a.a $(OBJS)
+pi_gen:	pi_gen.o si5351a.o
+	$(CC) pi_gen.o si5351a.o -o ./pi_gen
 
 clean:
 	rm -f *.o *.xo core .errs.t
