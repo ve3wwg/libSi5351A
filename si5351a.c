@@ -163,16 +163,16 @@ read_all(Si5351A *si) {
 }
 
 void
-Si5351A_clock_enable(Si5351A *si,Clock clock,bool on) {
+Si5351A_clock_enable(Si5351A *si,int clockx,bool on) {
 
-	switch ( clock ) {
-	case Clock0:
+	switch ( clockx ) {
+	case 0:
 		si->r3.clk0_oeb = on ? 0 : 1;
 		break;
-	case Clock1:
+	case 1:
 		si->r3.clk1_oeb = on ? 0 : 1;
 		break;
-	case Clock2:
+	case 2:
 		si->r3.clk2_oeb = on ? 0 : 1;
 		break;
 	}
@@ -180,16 +180,16 @@ Si5351A_clock_enable(Si5351A *si,Clock clock,bool on) {
 }
 
 void
-Si5351A_clock_enable_pin(Si5351A *si,Clock clock,bool enable) {
+Si5351A_clock_enable_pin(Si5351A *si,int clockx,bool enable) {
 
-	switch ( clock ) {
-	case Clock0:
+	switch ( clockx ) {
+	case 0:
 		si->r9.oeb_clk0 = enable ? 0 : 1;
 		break;
-	case Clock1:
+	case 1:
 		si->r9.oeb_clk1 = enable ? 0 : 1;
 		break;
-	case Clock2:
+	case 2:
 		si->r9.oeb_clk2 = enable ? 0 : 1;
 		break;
 	}
@@ -197,18 +197,18 @@ Si5351A_clock_enable_pin(Si5351A *si,Clock clock,bool enable) {
 }
 
 void
-Si5351A_clock_power(Si5351A *si,Clock clock,bool on) {
+Si5351A_clock_power(Si5351A *si,int clockx,bool on) {
 
-	switch ( clock ) {
-	case Clock0:
+	switch ( clockx ) {
+	case 0:
 		si->r16.clkx_pdn = on ? 0 : 1;
 		write1(si,16,&si->r16);
 		break;
-	case Clock1:
+	case 1:
 		si->r17.clkx_pdn = on ? 0 : 1;
 		write1(si,17,&si->r17);
 		break;
-	case Clock2:
+	case 2:
 		si->r18.clkx_pdn = on ? 0 : 1;
 		write1(si,18,&si->r18);
 		break;
@@ -216,19 +216,19 @@ Si5351A_clock_power(Si5351A *si,Clock clock,bool on) {
 }
 
 void
-Si5351A_clock_msynth(Si5351A *si,Clock clock,MultiSynthMode mode) {
+Si5351A_clock_msynth(Si5351A *si,int clockx,MultiSynthMode mode) {
 	bool mint = mode == IntegerMode ? true : false;
 
-	switch ( clock ) {
-	case Clock0:
+	switch ( clockx ) {
+	case 0:
 		si->r16.msx_int = mint;
 		write1(si,16,&si->r16);
 		break;
-	case Clock1:
+	case 1:
 		si->r17.msx_int = mint;
 		write1(si,17,&si->r17);
 		break;
-	case Clock2:
+	case 2:
 		si->r18.msx_int = mint;
 		write1(si,18,&si->r18);
 		break;
@@ -236,19 +236,19 @@ Si5351A_clock_msynth(Si5351A *si,Clock clock,MultiSynthMode mode) {
 }
 
 void
-Si5351A_clock_pll(Si5351A *si,Clock clock,PLL pll) {
-	bool pllb = pll == PLLB;
+Si5351A_clock_pll(Si5351A *si,int clockx,int pllx) {
+	bool pllb = pllx == 1;
 
-	switch ( clock ) {
-	case Clock0:
+	switch ( clockx ) {
+	case 0:
 		si->r16.msx_src = pllb;
 		write1(si,16,&si->r16);
 		break;
-	case Clock1:
+	case 1:
 		si->r17.msx_src = pllb;
 		write1(si,17,&si->r17);
 		break;
-	case Clock2:
+	case 2:
 		si->r18.msx_src = pllb;
 		write1(si,18,&si->r18);
 		break;
@@ -256,38 +256,38 @@ Si5351A_clock_pll(Si5351A *si,Clock clock,PLL pll) {
 }
 
 void
-Si5351A_clock_polarity(Si5351A *si,Clock clock,bool invert) {
+Si5351A_clock_polarity(Si5351A *si,int clockx,bool invert) {
 
-	switch ( clock ) {
-	case Clock0:
-		si->r16.msx_inv = invert;
+	switch ( clockx ) {
+	case 0:
+		si->r16.clkx_inv = invert;
 		write1(si,16,&si->r16);
 		break;
-	case Clock1:
-		si->r17.msx_inv = invert;
+	case 1:
+		si->r17.clkx_inv = invert;
 		write1(si,17,&si->r17);
 		break;
-	case Clock2:
-		si->r18.msx_inv = invert;
+	case 2:
+		si->r18.clkx_inv = invert;
 		write1(si,18,&si->r18);
 		break;
 	}
 }
 
 void
-Si5351A_clock_insrc(Si5351A *si,Clock clock,ClockSource src) {
+Si5351A_clock_source(Si5351A *si,int clockx,ClockSource src) {
 	unsigned s = (unsigned)src;
 
-	switch ( clock ) {
-	case Clock0:
+	switch ( clockx ) {
+	case 0:
 		si->r16.clkx_src = s;
 		write1(si,16,&si->r16);
 		break;
-	case Clock1:
+	case 1:
 		si->r17.clkx_src = s;
 		write1(si,17,&si->r17);
 		break;
-	case Clock2:
+	case 2:
 		si->r18.clkx_src = s;
 		write1(si,18,&si->r18);
 		break;
@@ -295,19 +295,19 @@ Si5351A_clock_insrc(Si5351A *si,Clock clock,ClockSource src) {
 }
 
 void
-Si5351A_clock_drive(Si5351A *si,Clock clock,ClockDrive drv) {
+Si5351A_clock_drive(Si5351A *si,int clockx,ClockDrive drv) {
 	unsigned d = (unsigned)drv;
 
-	switch ( clock ) {
-	case Clock0:
+	switch ( clockx ) {
+	case 0:
 		si->r16.clkx_idrv = d;
 		write1(si,16,&si->r16);
 		break;
-	case Clock1:
+	case 1:
 		si->r17.clkx_idrv = d;
 		write1(si,17,&si->r17);
 		break;
-	case Clock2:
+	case 2:
 		si->r18.clkx_idrv = d;
 		write1(si,18,&si->r18);
 		break;
@@ -315,17 +315,17 @@ Si5351A_clock_drive(Si5351A *si,Clock clock,ClockDrive drv) {
 }
 
 void
-Si5351A_clock_disable_state(Si5351A *si,Clock clock,DisState state) {
+Si5351A_clock_disable_state(Si5351A *si,int clockx,DisState state) {
 	unsigned s = (unsigned)state;
 
-	switch ( clock ) {
-	case Clock0:
+	switch ( clockx ) {
+	case 0:
 		si->r24.clk0_dis_state = s;
 		break;
-	case Clock1:
+	case 1:
 		si->r24.clk1_dis_state = s;
 		break;
-	case Clock2:
+	case 2:
 		si->r24.clk2_dis_state = s;
 		break;
 	}
@@ -416,13 +416,13 @@ Si5351A_msynth_div(Si5351A *si,short msynth,RxDiv div) {
 }
 
 void
-Si5351A_clock_intmask(Si5351A *si,PLL pll,bool mask) {
+Si5351A_clock_intmask(Si5351A *si,int pllx,bool mask) {
 
-	switch ( pll ) {
-	case PLLA:
+	switch ( pllx ) {
+	case 0:
 		si->r2.lol_a_mask = mask;
 		break;
-	case PLLB:
+	case 1:
 		si->r2.lol_b_mask = mask;
 		break;
 	}
@@ -436,13 +436,13 @@ Si5351A_xtal_cap(Si5351A *si,XtalCap cap) {
 }
 
 void
-Si5351A_pll_reset(Si5351A *si,PLL pll) {
+Si5351A_pll_reset(Si5351A *si,int pllx) {
 
-	switch ( pll ) {
-	case PLLA:
+	switch ( pllx ) {
+	case 0:
 		si->r177.plla_rst = 1;
 		break;
-	case PLLB:
+	case 1:
 		si->r177.pllb_rst = 1;
 		break;
 	}
@@ -450,11 +450,11 @@ Si5351A_pll_reset(Si5351A *si,PLL pll) {
 }
 
 bool
-Si5351A_pll_is_reset(Si5351A *si,PLL pll) {
+Si5351A_pll_is_reset(Si5351A *si,int pllx) {
 
 	read1(si,177,&si->r177);
 
-	if ( pll == PLLA )
+	if ( pllx == 0 )
 		return !si->r177.plla_rst;
 	else	return !si->r177.pllb_rst;
 }
@@ -518,13 +518,32 @@ Si5351A_set_pll(Si5351A *si,short pllx,uint32_t A,uint32_t B,uint32_t C) {
 }
 
 bool
-Si5351A_is_lol(Si5351A *si,PLL pll) {
+Si5351A_set_phase(Si5351A *si,int clockx,unsigned phase) {
+
+	switch ( clockx ) {
+	case 0:
+		si->r165.clkx_phoff = phase;
+		return write1(si,165,&si->r165) == 1;
+	case 1:
+		si->r166.clkx_phoff = phase;
+		return write1(si,166,&si->r166) == 1;
+	case 2:
+		si->r167.clkx_phoff = phase;
+		return write1(si,167,&si->r167) == 1;
+	default:
+		;
+	}
+	return false;
+}
+
+bool
+Si5351A_is_lol(Si5351A *si,int pllx) {
 
 	read1(si,0,&si->r0);
-	switch ( pll ) {
-	case PLLA:
+	switch ( pllx ) {
+	case 0:
 		return si->r0.lol_a;
-	case PLLB:
+	case 1:
 		return si->r0.lol_b;
 	}
 
@@ -539,30 +558,26 @@ Si5351A_device_reset(Si5351A *si,XtalCap cap) {
 	read_all(si);	
 	si->r183.b01001 = 0b01001;		// Datasheet errata says this is correct value for r183
 
-	Si5351A_pll_reset(si,PLLA);
+	Si5351A_pll_reset(si,0);
 	si->r177.plla_rst = 1;
 
-	while ( !Si5351A_pll_is_reset(si,PLLA) );
+	while ( !Si5351A_pll_is_reset(si,0) );
 
-	Si5351A_pll_reset(si,PLLB);
+	Si5351A_pll_reset(si,1);
 	si->r177.pllb_rst = 1;
-	while ( !Si5351A_pll_is_reset(si,PLLB) );
+	while ( !Si5351A_pll_is_reset(si,1) );
 	
-	while ( !Si5351A_pll_is_reset(si,PLLA) );
-	while ( !Si5351A_pll_is_reset(si,PLLB) );
+	while ( !Si5351A_pll_is_reset(si,0) );
+	while ( !Si5351A_pll_is_reset(si,1) );
 	write1(si,177,&si->r177);
 
-	Si5351A_clock_enable_pin(si,Clock0,false);
-	Si5351A_clock_enable_pin(si,Clock1,false);
-	Si5351A_clock_enable_pin(si,Clock2,false);
-	Si5351A_clock_enable(si,Clock0,false);
-	Si5351A_clock_enable(si,Clock1,false);
-	Si5351A_clock_enable(si,Clock2,false);
-	Si5351A_clock_intmask(si,PLLA,true);
-	Si5351A_clock_intmask(si,PLLB,true);
-	Si5351A_clock_power(si,Clock0,false);
-	Si5351A_clock_power(si,Clock1,false);
-	Si5351A_clock_power(si,Clock2,false);
+	for ( int clockx=0; clockx<3; ++clockx ) {
+		Si5351A_clock_enable_pin(si,clockx,false);
+		Si5351A_clock_enable(si,clockx,false);
+		Si5351A_clock_power(si,clockx,false);
+	}
+	Si5351A_clock_intmask(si,0,true);
+	Si5351A_clock_intmask(si,1,true);
 	Si5351A_xtal_cap(si,cap);
 
 	// Only choice for Si5351A:
@@ -570,21 +585,13 @@ Si5351A_device_reset(Si5351A *si,XtalCap cap) {
 	si->r15.plla_src = 0;		// XTAL
 	write1(si,15,&si->r15);
 
-	Si5351A_clock_msynth(si,Clock0,FractionalMode);
-	Si5351A_clock_msynth(si,Clock1,FractionalMode);
-	Si5351A_clock_msynth(si,Clock2,FractionalMode);
-	Si5351A_clock_polarity(si,Clock0,false);
-	Si5351A_clock_polarity(si,Clock1,false);
-	Si5351A_clock_polarity(si,Clock2,false);
-	Si5351A_clock_insrc(si,Clock0,MSynth_Source);
-	Si5351A_clock_insrc(si,Clock1,MSynth_Source);
-	Si5351A_clock_insrc(si,Clock2,MSynth_Source);
-	Si5351A_clock_drive(si,Clock0,Drive6mA);
-	Si5351A_clock_drive(si,Clock1,Drive6mA);
-	Si5351A_clock_drive(si,Clock2,Drive6mA);
-	Si5351A_clock_disable_state(si,Clock0,DisHiZ);
-	Si5351A_clock_disable_state(si,Clock1,DisHiZ);
-	Si5351A_clock_disable_state(si,Clock2,DisHiZ);
+	for ( int clockx=0; clockx<3; ++clockx ) {
+		Si5351A_clock_msynth(si,clockx,FractionalMode);
+		Si5351A_clock_polarity(si,clockx,false);
+		Si5351A_clock_source(si,clockx,MSynth_Source);
+		Si5351A_clock_drive(si,clockx,Drive6mA);
+		Si5351A_clock_disable_state(si,clockx,DisHiZ);
+	}
 }
 
 // End si5351a.c

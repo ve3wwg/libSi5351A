@@ -12,6 +12,7 @@
 #include <string.h>
 #include <time.h>
 #include <assert.h>
+#include <getopt.h>
 
 #include <sys/ioctl.h>
 #include <linux/i2c-dev.h>
@@ -20,6 +21,31 @@
 
 static const char *i2cbus = "/dev/i2c-1";
 static int i2c_fd = -1;
+static bool debugf = false;
+
+static void
+usage(const char *cmd) {
+	const char *cp = strrchr(cmd,'/');
+
+	if ( cp )
+		cmd = cp + 1;
+	printf("Usage: %s [-optons]\n"
+		"where:\n"
+		"\t-x :\tClock 0..3 (default 0)\n"
+		"\t-p :\tPLLA = 0, PLLB = 1 (default PLLA)\n"
+		"\t-a :\tInteger value a for PLL,\n"
+		"\t-b :\tnumerator b for PLL,\n"
+		"\t-c :\tdenominator c for PLL\n"
+		"\t-A :\tInteger value A for MultiSynth,\n"
+		"\t-B :\tnumerator B for MultiSynth,\n"
+		"\t-C :\tdenominator value C for MultiSynth\n"
+		"\t-r :\tDivider R 1/2/4/.../128 (default 1)\n"
+		"\t-i\tInteger division (default fractional)\n"
+		"\t-I\tInvert output\n"
+		"\t-X\tOutput source is XTAL\n"
+		"\t-d\tDebug output\n"
+		"\t-h\tThis help.\n",cmd);
+}
 
 static int
 readcb(uint8_t i2c_addr,uint8_t *buf,uint8_t bytes) {
@@ -42,10 +68,12 @@ readcb(uint8_t i2c_addr,uint8_t *buf,uint8_t bytes) {
 			(unsigned)i2c_addr,
 			(unsigned)bytes);
 	assert(rc == 1);
-	printf("%02X [ ",i2c_addr);
-	for ( uint8_t x=0; x<bytes; ++x )
-		printf(" %02X",buf[x]);
-	printf(" ] (%d)\n",(int)bytes);
+	if ( debugf ) {
+		printf("%02X [ ",i2c_addr);
+		for ( uint8_t x=0; x<bytes; ++x )
+			printf(" %02X",buf[x]);
+		printf(" ] (%d)\n",(int)bytes);
+	}
 
 	return rc;
 }
@@ -70,48 +98,39 @@ writecb(uint8_t i2c_addr,uint8_t *buf,uint8_t bytes) {
 			strerror(errno),
 			(unsigned)i2c_addr,
 			(unsigned)bytes);
-	if ( bytes ==1 ) 
-		printf("%02X [ W r%d ]\n",i2c_addr,buf[0]);
-	else	{
-		printf("%02X [ W r%d :",i2c_addr,buf[0]);
-		for ( uint8_t x=1; x<bytes; ++x )
-			printf(" %02X",buf[x]);
-		printf(" ] (%d)\n",(int)bytes);
+	if ( debugf ) {
+		if ( bytes ==1 ) 
+			printf("%02X [ W r%d ]\n",i2c_addr,buf[0]);
+		else	{
+			printf("%02X [ W r%d :",i2c_addr,buf[0]);
+			for ( uint8_t x=1; x<bytes; ++x )
+				printf(" %02X",buf[x]);
+			printf(" ] (%d)\n",(int)bytes);
+		}
 	}
 	assert(rc == 1);
 	return rc;
 }
 
-static void
-dump_regs(uint8_t reg,uint8_t n) {
-	uint8_t sbuf[16];
-
-	sbuf[0] = reg;
-	writecb(0x60,sbuf,1);
-	readcb(0x60,sbuf,n);
-}
-
-void
-dump_all() {
-
-	puts("Register Dump:");
-	dump_regs(0,16);
-	dump_regs(16,3);
-	dump_regs(24,1);
-	dump_regs(26,8);
-	dump_regs(34,8);
-	dump_regs(42,8);
-	dump_regs(50,8);
-	dump_regs(149,13);
-	dump_regs(162,3);
-	dump_regs(165,3);
-	dump_regs(177,1);
-	dump_regs(183,1);
-}
-
 int
 main(int argc,char **argv) {
+	static const char cmdopts[] = ":ha:b:c:A:B:C:r:x:XiIp:d";
+	static const struct {
+		unsigned	v;
+		RxDiv		d;
+	} rxdivs[] = {
+		{ 1, RxDiv1 },
+		{ 2, RxDiv2 },
+		{ 4, RxDiv4 },
+		{ 8, RxDiv8 },
+		{ 16, RxDiv16 },
+		{ 32, RxDiv32 },
+		{ 64, RxDiv64 },
+		{ 128, RxDiv128 }
+	};
 	Si5351A si;
+	unsigned a = 28u, b = 0u, c = 1048575u, A = 36, B = 0, C = 1048575u, d = 1, rxdiv = 1;
+	int optch, clockx = 0, pllx = 0;
 
 	i2c_fd = open(i2cbus,O_RDWR);
 	if ( i2c_fd < 0 ) {
@@ -121,39 +140,84 @@ main(int argc,char **argv) {
 
 	Si5351A_init(&si,0x60,readcb,writecb,&si,Cap6pF);
 	
-	puts("Initialized, enabling\n");
+	Si5351A_clock_power(&si,clockx,true);
+	Si5351A_clock_source(&si,clockx,MSynth_Source);
+	Si5351A_clock_msynth(&si,clockx,FractionalMode);
+	Si5351A_clock_pll(&si,clockx,pllx);
 
-	Si5351A_clock_power(&si,Clock0,true);
-	Si5351A_clock_insrc(&si,Clock0,MSynth_Source);
-	Si5351A_clock_msynth(&si,Clock0,FractionalMode);
-	Si5351A_set_msynth(&si,0,36,0,1048575);
-	Si5351A_set_pll(&si,0,28,838860,1048575);
-	Si5351A_msynth_div(&si,0,RxDiv1);
-	Si5351A_clock_pll(&si,Clock0,PLLA);
-	Si5351A_pll_reset(&si,PLLA);
-	Si5351A_clock_enable(&si,Clock0,true);
-	Si5351A_clock_enable_pin(&si,Clock0,false);
-
-	usleep(10);
-	dump_all();
-
-#if 0
-	time_t t0, t1;
-	bool a=false, b=false, f;
-
-	t0 = time(0);
-	while ( (t1 = time(0)) - t0 < 10 ) {
-		if ( (f=Si5351A_is_lol(&si,PLLA)) != a ) {
-			a = f;
-			printf("LOL PLLA: %d\n",a);
+	while ( (optch = getopt(argc,argv,cmdopts)) != -1 ) {
+		switch ( optch ) {
+		case 'a':
+			a = strtoul(optarg,0,10);
+			Si5351A_set_pll(&si,clockx,a,b,c);
+			break;
+		case 'b':
+			b = strtoul(optarg,0,10);
+			Si5351A_set_pll(&si,clockx,a,b,c);
+			break;
+		case 'c':
+			c = strtoul(optarg,0,10);
+			Si5351A_set_pll(&si,clockx,a,b,c);
+			break;
+		case 'A':
+			A = strtoul(optarg,0,10);
+			Si5351A_set_msynth(&si,0,A,B,C);
+			break;
+		case 'B':
+			B = strtoul(optarg,0,10);
+			Si5351A_set_msynth(&si,clockx,A,B,C);
+			break;
+		case 'C':
+			C = strtoul(optarg,0,10);
+			Si5351A_set_msynth(&si,clockx,A,B,C);
+			break;
+		case 'x':
+			clockx = strtol(optarg,0,10);
+			break;
+		case 'p':
+			pllx = strtol(optarg,0,10);
+			Si5351A_clock_pll(&si,clockx,pllx);
+			break;
+		case 'i':
+			Si5351A_clock_msynth(&si,clockx,IntegerMode);
+			break;
+		case 'I':
+			Si5351A_clock_polarity(&si,clockx,true);
+			break;
+		case 'r':
+			d = strtoul(optarg,0,10);
+			rxdiv = ~0;
+			for ( short x=0; x<8; ++x ) {
+				if ( d == rxdivs[x].v ) {
+					rxdiv = rxdivs[x].d;
+					break;
+				}
+			}
+			if ( rxdiv == ~0u ) {
+				fprintf(stderr,"Invalid -r\n");
+				exit(1);
+			}
+			Si5351A_msynth_div(&si,0,rxdiv);
+			break;
+		case 'X':
+			Si5351A_clock_source(&si,clockx,XTAL_Source);
+			break;
+		case 'd':
+			debugf = true;
+			break;
+		case 'h':
+			usage(argv[0]);
+			return 0;
+		default:
+			fprintf(stderr,"Unknown option -%c\n",optch);
+			exit(1);
 		}
-		if ( (f=Si5351A_is_lol(&si,PLLB)) != a ) {
-			b = f;
-			printf("LOL PLLB: %d\n",b);
-		}
-		usleep(1000);
 	}
-#endif
+
+	Si5351A_pll_reset(&si,pllx);
+	Si5351A_clock_enable(&si,clockx,true);
+	Si5351A_clock_enable_pin(&si,clockx,false);
+
 	close(i2c_fd);
 }
 

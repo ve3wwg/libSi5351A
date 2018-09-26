@@ -14,17 +14,6 @@ typedef int (i2c_writecb_t)(uint8_t i2c_addr,uint8_t *buf,uint8_t bytes);
 typedef int (i2c_readcb_t)(uint8_t i2c_addr,uint8_t *buf,uint8_t bytes);
 
 typedef enum {
-	Clock0=0,
-	Clock1,
-	Clock2
-} Clock;
-
-typedef enum {
-	PLLA=0,
-	PLLB
-} PLL;
-
-typedef enum {
 	FractionalMode=0,
 	IntegerMode
 } MultiSynthMode;
@@ -115,7 +104,7 @@ struct s_Si5351A {			// Si5351A Register Definitions
 	struct s_r16 {			// Clk0 control
 		uint8_t clkx_idrv : 2;	// RW: 00=2, 01=4, 10=6, 11=8 mA
 		uint8_t	clkx_src : 2;	// RW: 00=XTAL, 11=MultiSynth 0
-		uint8_t	msx_inv : 1;	// RW: 1=Invert
+		uint8_t	clkx_inv : 1;	// RW: 1=Invert
 		uint8_t	msx_src : 1;	// RW: 0=PLLA, 1=PLLB
 		uint8_t	msx_int : 1;	// RW: 0=Fractional mode, 1=Integer mode
 		uint8_t	clkx_pdn : 1;	// RW: 0=Powered up, 1=CLK0 driver powered down
@@ -269,25 +258,27 @@ typedef struct s_Si5351A Si5351A;
 void Si5351A_init(Si5351A *si,uint8_t i2c_addr,i2c_readcb_t readcb,i2c_writecb_t writecb,void *arg,XtalCap cap);
 void Si5351A_device_reset(Si5351A *si,XtalCap cap);
 bool Si5351A_is_busy(Si5351A *si);
-void Si5351A_clock_enable(Si5351A *si,Clock clock,bool on);
-void Si5351A_clock_enable_pin(Si5351A *si,Clock clock,bool enable);
-void Si5351A_clock_power(Si5351A *si,Clock clock,bool on);
-void Si5351A_clock_msynth(Si5351A *si,Clock clock,MultiSynthMode mode);
-void Si5351A_clock_polarity(Si5351A *si,Clock clock,bool invert);
-void Si5351A_clock_insrc(Si5351A *si,Clock clock,ClockSource src);
-void Si5351A_clock_pll(Si5351A *si,Clock clock,PLL pll);
-void Si5351A_clock_drive(Si5351A *si,Clock clock,ClockDrive drv);
-void Si5351A_clock_disable_state(Si5351A *si,Clock clock,DisState state);
-void Si5351A_clock_intmask(Si5351A *si,PLL pll,bool mask);
+void Si5351A_clock_enable(Si5351A *si,int clockx,bool on);
+void Si5351A_clock_enable_pin(Si5351A *si,int clockx,bool enable);
+void Si5351A_clock_power(Si5351A *si,int clockx,bool on);
+void Si5351A_clock_msynth(Si5351A *si,int clockx,MultiSynthMode mode);
+void Si5351A_clock_polarity(Si5351A *si,int clockx,bool invert);
+void Si5351A_clock_source(Si5351A *si,int clockx,ClockSource src);
+void Si5351A_clock_pll(Si5351A *si,int clockx,int pllx);
+void Si5351A_clock_drive(Si5351A *si,int clockx,ClockDrive drv);
+void Si5351A_clock_disable_state(Si5351A *si,int clockx,DisState state);
+void Si5351A_clock_intmask(Si5351A *si,int pllx,bool mask);
+bool Si5351A_clock_invert(Si5351A *si,int clockx,bool enable);
 void Si5351A_xtal_cap(Si5351A *si,XtalCap cap);
-void Si5351A_pll_reset(Si5351A *si,PLL pll);
-bool Si5351A_pll_is_reset(Si5351A *si,PLL pll);
+void Si5351A_pll_reset(Si5351A *si,int pllx);
+bool Si5351A_pll_is_reset(Si5351A *si,int pllx);
 
 bool Si5351A_set_pll(Si5351A *si,short pllx,uint32_t A,uint32_t B,uint32_t C);
 bool Si5351A_set_msynth(Si5351A *si,short msynthx,uint32_t A,uint32_t B,uint32_t C);
 bool Si5351A_msynth_div(Si5351A *si,short msynth,RxDiv div);
+bool Si5351A_set_phase(Si5351A *si,int clockx,unsigned phase);
 
-bool Si5351A_is_lol(Si5351A *si,PLL pll);
+bool Si5351A_is_lol(Si5351A *si,int pllx);
 
 #ifdef __cplusplus
 }
